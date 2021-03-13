@@ -1,0 +1,39 @@
+version: '2.0'
+
+services:
+  d2cs:
+    container_name: d2cs
+    build: .
+    image: pvpgn-pro:1.99.7.2.1
+    volumes:
+      - ./etc:/pvpgn/etc/pvpgn
+      - ./var:/pvpgn/var/pvpgn
+    network_mode: host
+   # ports:
+   #   - 6113:6113
+   #   - 6113:6113/udp
+    entrypoint: ["/pvpgn/sbin/d2cs","-f"]
+  d2dbs:
+    container_name: d2dbs
+    build: .
+    image: pvpgn-pro:1.99.7.2.1
+    volumes:
+      - ./etc:/pvpgn/etc/pvpgn
+      - ./var:/pvpgn/var/pvpgn
+    network_mode: host
+    #ports:
+    #  - 6114:6114
+    #  - 6114:6114/udp
+    entrypoint: ["/pvpgn/sbin/d2dbs","-f"]
+  pvpgn:
+    container_name: pvpgn
+    build: .
+    image: pvpgn-pro:1.99.7.2.1
+    volumes:
+      - ./etc:/pvpgn/etc/pvpgn
+      - ./var:/pvpgn/var/pvpgn
+    network_mode: host
+    #ports:
+    #  - 6112:6112
+    #  - 6112:6112/udp
+    entrypoint: ["/pvpgn/sbin/bnetd","-f"]
