@@ -1,39 +1,65 @@
-version: '2.0'
+# PvPGN with a Diablo II closed realm (bnetd + d2cs + d2dbs).
+# For a complete realm including the D2GS game server, use the compose file
+# in https://github.com/espenmjos/d2gs instead.
+#
+#   cp .env.example .env
+#   docker compose up -d --build
+#
+# The daemons get fixed addresses on a private network. bnetd only accepts a
+# d2cs connecting from the address in realm.conf, so that holds the internal
+# d2cs address; address translation replaces it with PUBLIC_IP for clients.
+
+x-pvpgn: &pvpgn
+  image: pvpgn:1.99.8
+  build: .
+  restart: unless-stopped
+  volumes:
+    - ./etc:/usr/local/etc/pvpgn
+    - ./var:/usr/local/var/pvpgn
 
 services:
+  bnetd:
+    <<: *pvpgn
+    command: bnetd
+    environment:
+      REALM_NAME: ${REALM_NAME:-D2CS}
+      REALM_DESCRIPTION: ${REALM_DESCRIPTION:-PvPGN Closed Realm}
+      D2CS_ADDR: 172.31.0.11:6113
+      PUBLIC_IP: ${PUBLIC_IP:?set PUBLIC_IP in .env}
+      TRANSLATE: 172.31.0.11:6113
+    ports:
+      - "6112:6112"
+      - "6112:6112/udp"
+    networks:
+      pvpgn: { ipv4_address: 172.31.0.10 }
+
   d2cs:
-    container_name: d2cs
-    build: .
-    image: pvpgn-pro:1.99.7.2.1
-    volumes:
-      - ./etc:/pvpgn/etc/pvpgn
-      - ./var:/pvpgn/var/pvpgn
-    network_mode: host
-   # ports:
-   #   - 6113:6113
-   #   - 6113:6113/udp
-    entrypoint: ["/pvpgn/sbin/d2cs","-f"]
+    <<: *pvpgn
+    command: d2cs
+    environment:
+      REALM_NAME: ${REALM_NAME:-D2CS}
+      BNETD_ADDR: 172.31.0.10:6112
+      D2GS_IPS: ${D2GS_IPS:?set D2GS_IPS in .env}
+      D2GS_PASSWORD: ${D2GS_PASSWORD:-}
+    ports:
+      - "6113:6113"
+    networks:
+      pvpgn: { ipv4_address: 172.31.0.11 }
+    depends_on: [bnetd]
+
   d2dbs:
-    container_name: d2dbs
-    build: .
-    image: pvpgn-pro:1.99.7.2.1
-    volumes:
-      - ./etc:/pvpgn/etc/pvpgn
-      - ./var:/pvpgn/var/pvpgn
-    network_mode: host
-    #ports:
-    #  - 6114:6114
-    #  - 6114:6114/udp
-    entrypoint: ["/pvpgn/sbin/d2dbs","-f"]
+    <<: *pvpgn
+    command: d2dbs
+    environment:
+      D2GS_IPS: ${D2GS_IPS:?set D2GS_IPS in .env}
+    ports:
+      - "6114:6114"
+    networks:
+      pvpgn: { ipv4_address: 172.31.0.12 }
+    depends_on: [bnetd]
+
+networks:
   pvpgn:
-    container_name: pvpgn
-    build: .
-    image: pvpgn-pro:1.99.7.2.1
-    volumes:
-      - ./etc:/pvpgn/etc/pvpgn
-      - ./var:/pvpgn/var/pvpgn
-    network_mode: host
-    #ports:
-    #  - 6112:6112
-    #  - 6112:6112/udp
-    entrypoint: ["/pvpgn/sbin/bnetd","-f"]
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
