@@ -27,6 +27,8 @@ services:
       D2CS_ADDR: 172.31.0.11:6113
       PUBLIC_IP: ${PUBLIC_IP:?set PUBLIC_IP in .env}
       TRANSLATE: 172.31.0.11:6113
+      LAN_IP: ${LAN_IP:-}
+      LAN_NETWORK: ${LAN_NETWORK:-}
     ports:
       - "6112:6112"
       - "6112:6112/udp"
